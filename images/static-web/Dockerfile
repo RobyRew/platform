@@ -12,6 +12,7 @@ FROM nginxinc/nginx-unprivileged:1.29-alpine
 USER root
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY templates/default.conf.template /etc/nginx/templates/default.conf.template
+COPY conf/security-headers.conf /etc/nginx/robyrew/security-headers.conf
 RUN chown -R nginx:nginx /etc/nginx/templates
 USER nginx
 

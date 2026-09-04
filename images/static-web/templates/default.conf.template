@@ -35,14 +35,7 @@ server {
     set $csp_misc     "upgrade-insecure-requests";
     set $csp "${csp_default}; ${csp_script}; ${csp_style}; ${csp_img}; ${csp_font}; ${csp_connect}; ${csp_manifest}; ${csp_object}; ${csp_frame_a}; ${csp_base}; ${csp_form}; ${csp_misc}";
 
-    add_header Content-Security-Policy $csp always;
-    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-Frame-Options "DENY" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), midi=(), interest-cohort=()" always;
-    add_header Cross-Origin-Opener-Policy "same-origin" always;
-    add_header X-Permitted-Cross-Domain-Policies "none" always;
+    include /etc/nginx/robyrew/security-headers.conf;
 
     # X-XSS-Protection is deliberately absent. It is deprecated, ignored by
     # current browsers, and its filter could itself be abused to create an XSS on
@@ -64,6 +57,7 @@ server {
     # Fingerprinted build output — safe to cache hard.
     location ~* ^/(_astro|assets)/.*\.(js|css|woff2|woff|ttf|svg|png|jpg|jpeg|webp|avif|gif|ico)$ {
         expires 1y;
+        include /etc/nginx/robyrew/security-headers.conf;
         add_header Cache-Control "public, immutable" always;
         access_log off;
     }
@@ -71,6 +65,7 @@ server {
     # HTML is never cached hard: a stale shell pointing at deleted hashed assets
     # is a blank page that survives a redeploy.
     location = /index.html {
+        include /etc/nginx/robyrew/security-headers.conf;
         add_header Cache-Control "no-cache" always;
     }
 
@@ -80,6 +75,7 @@ server {
 
     location = /healthz {
         access_log off;
+        include /etc/nginx/robyrew/security-headers.conf;
         add_header Content-Type text/plain always;
         return 200 "ok\n";
     }
