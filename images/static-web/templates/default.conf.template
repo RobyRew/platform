@@ -73,6 +73,15 @@ server {
         try_files $uri $uri/ ${WEB_FALLBACK};
     }
 
+    # Hidden files are never part of a build output, and .git in a served
+    # directory would expose the repository.
+    location ~ /\.(?!well-known) { deny all; }
+
+    # App-specific locations — redirects, sitemap and service-worker rules — drop
+    # in here. They inherit nothing automatically, so any block that sets its own
+    # add_header must include the security-headers snippet too.
+    include /etc/nginx/robyrew/app.d/*.conf;
+
     location = /healthz {
         access_log off;
         include /etc/nginx/robyrew/security-headers.conf;

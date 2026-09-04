@@ -11,6 +11,31 @@ is vendored into the apps; they reference it by version.
 | Path | Purpose |
 |---|---|
 | `.github/workflows/build-image.yml` | Reusable workflow: build the app's Dockerfile on GitHub's runners, push to GHCR, then ask Dokploy to pull it. |
+| `images/static-web/` | `ghcr.io/robyrew/static-web` — pinned, non-root nginx runtime with one maintained security-header set. |
+
+## static-web
+
+```dockerfile
+FROM ghcr.io/robyrew/static-web:1
+ENV WEB_FALLBACK=/index.html                     # SPA; omit for multi-page
+ENV CSP_CONNECT_EXTRA="https://stats.cosmincalin.es"
+COPY --from=build --chown=nginx:nginx /app/dist /usr/share/nginx/html
+```
+
+Runs as uid 101 on **8080** — a Dokploy domain pointing at port 80 must be changed.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `WEB_PORT` | `8080` | listen port |
+| `WEB_FALLBACK` | `=404` | `try_files` fallback. `/index.html` for an SPA; `$uri/index.html $uri.html =404` for Astro-style extensionless URLs |
+| `CSP_SCRIPT_EXTRA` etc. | empty | widen one CSP directive instead of restating the policy |
+
+App-specific redirects and cache rules go in `/etc/nginx/robyrew/app.d/*.conf`.
+
+**nginx `add_header` does not merge.** Any block that sets its own header discards
+every inherited one, so an app.d block that sets `Cache-Control` must also
+`include /etc/nginx/robyrew/security-headers.conf;` or that response ships with no
+CSP at all.
 
 Planned (see the infrastructure repo's plan file):
 
