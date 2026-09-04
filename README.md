@@ -33,10 +33,18 @@ on:
 
 jobs:
   build:
+    permissions:
+      contents: read
+      packages: write
     uses: RobyRew/platform/.github/workflows/build-image.yml@main
     secrets:
       DOKPLOY_DEPLOY_WEBHOOK: ${{ secrets.DOKPLOY_DEPLOY_WEBHOOK }}
 ```
+
+`permissions` belongs in the **caller**, not only in the reusable workflow. A called
+workflow can only reduce the permissions it is invoked with, never escalate, and a
+repo whose `default_workflow_permissions` is `read` will fail at startup without
+this block.
 
 The image is published to `ghcr.io/<owner>/<repo>` as `:latest` and `:<sha>`.
 It is pushed with the workflow's `GITHUB_TOKEN`, so no registry PAT is stored in
