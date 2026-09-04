@@ -1,0 +1,85 @@
+# Reusable image build. Called by each app repo so the build definition exists
+# once rather than being copied per repo.
+#
+# Builds on GitHub's runners and pushes to GHCR, then asks Dokploy to pull. The
+# VPS has 2 GB of RAM and 2 cores and also runs Logto, the family DNS resolver
+# and the backups; its Docker build cache reached 3.07 GB in a single day of
+# building app images there.
+name: Build and publish image
+
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        description: 'GHCR path. Defaults to the calling repository, lowercased.'
+        type: string
+        required: false
+        default: ''
+      context:
+        type: string
+        default: '.'
+      dockerfile:
+        type: string
+        default: 'Dockerfile'
+      request_deploy:
+        description: 'POST the Dokploy webhook after pushing the image.'
+        type: boolean
+        default: true
+    secrets:
+      DOKPLOY_DEPLOY_WEBHOOK:
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write        # GITHUB_TOKEN pushes to GHCR; no PAT is stored anywhere
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # GHCR rejects uppercase path segments and the owner is "RobyRew", so the
+      # repository name is lowercased here rather than in every caller.
+      - name: Resolve image name
+        run: |
+          NAME='${{ inputs.image_name }}'
+          [ -n "$NAME" ] || NAME="${GITHUB_REPOSITORY,,}"
+          echo "IMAGE=ghcr.io/${NAME,,}" >> "$GITHUB_ENV"
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.context }}/${{ inputs.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+          # Layer cache lives on the runner, so the VPS accumulates none of it.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Runs after the push: Dokploy pulls :latest, so requesting the deploy any
+      # earlier would pull the previous image.
+      - name: Ask Dokploy to pull the new image
+        if: ${{ inputs.request_deploy }}
+        env:
+          HOOK: ${{ secrets.DOKPLOY_DEPLOY_WEBHOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "DOKPLOY_DEPLOY_WEBHOOK is unset — image pushed, deploy not requested." >&2
+            exit 1
+          fi
+          # The handler answers a bare POST with 301 instead of deploying; it
+          # expects a push-shaped body.
+          curl -fsS -X POST "$HOOK" \
+            -H 'Content-Type: application/json' \
+            -H 'X-GitHub-Event: push' \
+            -d "{\"ref\":\"${GITHUB_REF}\"}"
