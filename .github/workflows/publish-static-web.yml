@@ -28,7 +28,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/robyrew/static-web:1
-            ghcr.io/robyrew/static-web:1.0.0
+            ghcr.io/robyrew/static-web:1.0.1
             ghcr.io/robyrew/static-web:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

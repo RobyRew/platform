@@ -7,7 +7,7 @@
 #
 # Pinned on purpose: `nginx-unprivileged:alpine` would let an unattended rebuild
 # change the thing serving every site.
-FROM nginxinc/nginx-unprivileged:1.29-alpine
+FROM nginxinc/nginx-unprivileged:1.30-alpine
 
 USER root
 RUN rm -f /etc/nginx/conf.d/default.conf
