@@ -33,5 +33,12 @@ ENV WEB_PORT=8080 \
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=60s --timeout=10s --start-period=10s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:8080/healthz >/dev/null 2>&1 || exit 1
+# No Docker healthcheck. Docker runs one as `runc exec` inside the container,
+# and on vps01 every exec killed at its timeout left a pid charge and ~130 KB of
+# kernel memory behind (AdGuard, Sep 2026: 8,189 pids charged to a one-process
+# container, SUnreclaim 1.25 GB on a 2 GB host). That host's rule since then is
+# no exec-based healthcheck on a long-running container. NONE rather than no
+# instruction, so a healthcheck added by a later nginx-unprivileged base is
+# overridden too; an app can still declare its own after FROM. /healthz stays in
+# the server block for probes from outside the container.
+HEALTHCHECK NONE

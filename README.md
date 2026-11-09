@@ -24,6 +24,10 @@ COPY --from=build --chown=nginx:nginx /app/dist /usr/share/nginx/html
 
 Runs as uid 101 on **8080** — a Dokploy domain pointing at port 80 must be changed.
 
+No Docker `HEALTHCHECK`: the image sets it to `NONE`, because Docker would run it
+as an exec inside every site's container and vps01 allows no exec-based
+healthcheck. `GET /healthz` answers `200 ok` for a probe from outside the container.
+
 | Variable | Default | Purpose |
 |---|---|---|
 | `WEB_PORT` | `8080` | listen port |
