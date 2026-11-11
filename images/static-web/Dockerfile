@@ -10,6 +10,11 @@
 FROM nginxinc/nginx-unprivileged:1.30-alpine
 
 USER root
+# Alpine's security fixes for the packages the base ships with. The upstream tag is rebuilt on its own schedule, so
+# without this a rebuild could keep a fixed CVE: bibletype's image scan rejected libxslt 1.1.43-r3 (CVE-2026-87636,
+# CVE-2026-9947, HIGH; fixed in -r4) on 2026-11-11 while nginx-unprivileged:1.30-alpine still carried it.
+# `apk upgrade` stays within the Alpine release the base pins, so it moves patch versions only.
+RUN apk upgrade --no-cache
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY templates/default.conf.template /etc/nginx/templates/default.conf.template
 COPY conf/security-headers.conf /etc/nginx/robyrew/security-headers.conf
